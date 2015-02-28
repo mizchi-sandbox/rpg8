@@ -13,6 +13,7 @@
     "arda": "0.10.0",
     "bluebird": "^2.9.3",
     "font-awesome": "^4.2.0",
+    "lodash": "^3.3.1",
     "react": "^0.13.0-beta.2"
   },
   "devDependencies": {
