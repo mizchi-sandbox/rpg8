@@ -1,5 +1,10 @@
 import subscriber = require('./subscriber');
 import d = require('./defs')
+var Terrain = require('mz-terrain');
+
+function toGameTile(tile) {
+  return tile;
+}
 
 class MainContext extends Arda.Context<d.Props, d.State, d.ComponentProps> {
   static component = require('../../components/main');
@@ -8,11 +13,16 @@ class MainContext extends Arda.Context<d.Props, d.State, d.ComponentProps> {
   ];
 
   public initState(props){
-    return {};
+    var terrain = new Terrain(5, 1);
+    terrain.generate();
+    var tiles = terrain.toArray().map(toGameTile);
+    return {tiles: tiles};
   }
 
   public expandComponentProps(props, state): d.ComponentProps{
-    return {};
+    return {
+      tiles: state.tiles
+    };
   }
 }
 

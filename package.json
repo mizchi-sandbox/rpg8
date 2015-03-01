@@ -2,7 +2,7 @@
   "name": "arda-starter-project",
   "version": "0.0.1",
   "description": "",
-  "main": "lib/index.js",
+  "main": "public/index.html",
   "scripts": {
     "test": "./node_modules/.bin/mocha --require espower-coffee/guess test/spec-helper.coffee test/components/*.coffee test/contexts/*.coffee",
     "test-e2e": "./node_modules/.bin/mocha -t 150000 --require espower-coffee/guess test/spec-helper.coffee test/e2e/*.coffee",
@@ -14,6 +14,7 @@
     "bluebird": "^2.9.3",
     "font-awesome": "^4.2.0",
     "lodash": "^3.3.1",
+    "mz-terrain": "0.0.4",
     "react": "^0.13.0-beta.2"
   },
   "devDependencies": {

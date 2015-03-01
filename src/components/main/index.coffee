@@ -1,5 +1,5 @@
 template = require './template'
-
+Terrain = require('mz-terrain')
 $ = React.createElement
 
 hexPoints = (r) ->
@@ -13,40 +13,57 @@ hexPoints = (r) ->
     .map ([rx, ry]) -> "#{rx},#{ry}"
     .join(' ')
 
-Hex = React.createClass
-  render: ->
-    {x, y, r} = @props
-    $ 'g', transform: "translate(#{x}, #{y})", [
-      $ 'polygon',
-        points: hexPoints(r)
-        fill:'transparent'
-        stroke:'black'
-        strokeWidth:1
-        onClick: @onClickTile
-    ]
-
-  onClickTile: ->
-    console.log 'onClickTile'
-
 xyToUv = (x, y) =>
   u = x+(y&1)*0.5
   v = y*0.866025403784
   [u, v]
 
+height2color = (height) ->
+  min = -1
+  max = 4
+  rgb = 0
+  h =
+    if height < min then min
+    else if min < height < max then height
+    else
+      max
+  r = 1 - (h - min)/(max-min)
+  "rgb(#{~~(r*256)}, #{~~(r*256)}, 256"
+
+Hex = React.createClass
+  render: ->
+    {x, y, val} = @props
+    [u, v] = xyToUv(x, y)
+    size = 16
+    u = u*size
+    v = v*size
+    r = size*0.58
+
+    fillColor = height2color(val)
+    $ 'g', transform: "translate(#{u}, #{v})", key: "hex:#{x},#{y})", [
+      # $ 'text', textAnchor: 'middle', fontSize: 10, "#{~~x}, #{~~y}"
+      $ 'polygon',
+        points: hexPoints(r)
+        fill: fillColor
+        stroke:'black'
+        strokeWidth:1
+        onMouseUp: @onClickTile
+    ]
+  onClickTile: ->
+    console.log 'pos', @props.x, @props.y
+
 module.exports = React.createClass
   mixins: [Arda.mixin, require('./actions')]
   render: ->
-    size = 32
     $ 'div', className: 'main', [
-      $ 'svg', width:640, height: 480, [
-        $ 'g', transform: "translate(50,50)",
-          _.flatten(for x in _.range(10)
-            for y in _.range(8)
-              [u, v] = xyToUv(x, y)
-              $ Hex,
-                x: u*size
-                y: v*size
-                r: size*0.58
-          )
+      $ 'svg',
+        width:640
+        height: 640
+        draggable: true
+        style:
+          '-webkit-user-select': 'none'
+      , [
+          $ 'g', transform: "translate(50,50)",
+            @props.tiles.map (tile) -> $ Hex, tile
       ]
     ]
