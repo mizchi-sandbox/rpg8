@@ -28,18 +28,24 @@ height2color = (height) ->
     else
       max
   r = 1 - (h - min)/(max-min)
-  "rgb(#{~~(r*256)}, #{~~(r*256)}, 256"
+  "rgb(256, #{~~(r*256)}, #{~~(r*256)}"
 
 Hex = React.createClass
+  mixins: [Arda.mixin]
   render: ->
-    {x, y, val} = @props
+    {x, y, val, discoveryRate} = @props
     [u, v] = xyToUv(x, y)
     size = 16
     u = u*size
     v = v*size
     r = size*0.58
 
-    fillColor = height2color(val)
+    fillColor =
+      if discoveryRate > 0
+        height2color(val)
+      else
+        'black'
+
     $ 'g', transform: "translate(#{u}, #{v})", key: "hex:#{x},#{y})", [
       # $ 'text', textAnchor: 'middle', fontSize: 10, "#{~~x}, #{~~y}"
       $ 'polygon',
@@ -50,10 +56,10 @@ Hex = React.createClass
         onMouseUp: @onClickTile
     ]
   onClickTile: ->
-    console.log 'pos', @props.x, @props.y
+    @dispatch 'field:search-tile', @props.x, @props.y
 
 module.exports = React.createClass
-  mixins: [Arda.mixin, require('./actions')]
+  mixins: [Arda.mixin]
   render: ->
     $ 'div', className: 'main', [
       $ 'svg',

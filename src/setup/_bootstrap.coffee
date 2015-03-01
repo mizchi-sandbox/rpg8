@@ -1,5 +1,6 @@
 require './globals'
 MainContext = require '../contexts/main'
+console.warn = ->
 
 module.exports = ->
   # Initialize global properties

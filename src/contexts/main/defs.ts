@@ -1,16 +1,20 @@
 export interface Props {
 }
 
+import Field = require('./field');
+
 export interface Tile {
   x: number;
   y: number;
   val: number;
+  visible: boolean;
+  discoveryRate: number;
 }
 
 export interface State {
-  tiles: Tile[];
+  field: Field;
 }
 
 export interface ComponentProps {
-  tiles: Tile[]
+  tiles: Tile[];
 }

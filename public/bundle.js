@@ -1,15 +1,5 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 (function() {
-  module.exports = {
-    onClickGoToSub: function(event) {
-      return this.dispatch('main:go-to-sub');
-    }
-  };
-
-}).call(this);
-
-},{}],2:[function(require,module,exports){
-(function() {
   var $, Hex, Terrain, height2color, hexPoints, template, xyToUv;
 
   template = require('./template');
@@ -50,19 +40,20 @@
     rgb = 0;
     h = height < min ? min : (min < height && height < max) ? height : max;
     r = 1 - (h - min) / (max - min);
-    return "rgb(" + (~~(r * 256)) + ", " + (~~(r * 256)) + ", 256";
+    return "rgb(256, " + (~~(r * 256)) + ", " + (~~(r * 256));
   };
 
   Hex = React.createClass({
+    mixins: [Arda.mixin],
     render: function() {
-      var fillColor, r, ref, ref1, size, u, v, val, x, y;
-      ref = this.props, x = ref.x, y = ref.y, val = ref.val;
+      var discoveryRate, fillColor, r, ref, ref1, size, u, v, val, x, y;
+      ref = this.props, x = ref.x, y = ref.y, val = ref.val, discoveryRate = ref.discoveryRate;
       ref1 = xyToUv(x, y), u = ref1[0], v = ref1[1];
       size = 16;
       u = u * size;
       v = v * size;
       r = size * 0.58;
-      fillColor = height2color(val);
+      fillColor = discoveryRate > 0 ? height2color(val) : 'black';
       return $('g', {
         transform: "translate(" + u + ", " + v + ")",
         key: "hex:" + x + "," + y + ")"
@@ -77,12 +68,12 @@
       ]);
     },
     onClickTile: function() {
-      return console.log('pos', this.props.x, this.props.y);
+      return this.dispatch('field:search-tile', this.props.x, this.props.y);
     }
   });
 
   module.exports = React.createClass({
-    mixins: [Arda.mixin, require('./actions')],
+    mixins: [Arda.mixin],
     render: function() {
       return $('div', {
         className: 'main'
@@ -107,7 +98,7 @@
 
 }).call(this);
 
-},{"./actions":1,"./template":3,"mz-terrain":23}],3:[function(require,module,exports){
+},{"./template":2,"mz-terrain":23}],2:[function(require,module,exports){
 module.exports = (function (React) {
   var jade_globals_pointToHexPoints = typeof pointToHexPoints === "undefined" ? undefined : pointToHexPoints;
   var jade_globals_onClickTile = typeof onClickTile === "undefined" ? undefined : onClickTile;
@@ -218,7 +209,7 @@ module.exports = (function (React) {
   ;
   return fn;
 }(typeof React !== "undefined" ? React : require("react")))
-},{"react":183}],4:[function(require,module,exports){
+},{"react":183}],3:[function(require,module,exports){
 (function() {
   var template;
 
@@ -233,7 +224,7 @@ module.exports = (function (React) {
 
 }).call(this);
 
-},{"./template":5}],5:[function(require,module,exports){
+},{"./template":4}],4:[function(require,module,exports){
 module.exports = (function (React) {
   var fn = function(locals) {
     return function() {
@@ -270,7 +261,77 @@ module.exports = (function (React) {
   ;
   return fn;
 }(typeof React !== "undefined" ? React : require("react")))
-},{"react":183}],6:[function(require,module,exports){
+},{"react":183}],5:[function(require,module,exports){
+var Terrain = require('mz-terrain');
+function toGameTile(tile) {
+    return {
+        x: tile.x,
+        y: tile.y,
+        val: tile.val,
+        discoveryRate: 0,
+        visible: false
+    };
+}
+var Field = (function () {
+    function Field() {
+        var terrain = new Terrain(5, 1);
+        terrain.generate();
+        this.tiles = terrain.toArray().map(toGameTile);
+        var ix = _.sample(_.range(0, terrain.size - 1));
+        var iy = _.sample(_.range(0, terrain.size - 1));
+        var initialTile = _.find(this.tiles, function (t) { return t.x === ix && t.y === iy; });
+        initialTile.discoveryRate = 1;
+        initialTile.visible = true;
+    }
+    Field.prototype.getTilesArround = function (x, y) {
+        var _this = this;
+        var tiles = [];
+        var searchPath;
+        if (y % 2 === 1) {
+            searchPath = [
+                [0, -1],
+                [+1, -1],
+                [-1, 0],
+                [+1, 0],
+                [0, +1],
+                [+1, +1]
+            ];
+        }
+        else {
+            searchPath = [
+                [-1, -1],
+                [0, -1],
+                [-1, 0],
+                [+1, 0],
+                [-1, +1],
+                [0, +1]
+            ];
+        }
+        searchPath.map(function (p) {
+            var neibor = _.find(_this.tiles, function (t) { return t.x === x + p[0] && t.y === y + p[1]; });
+            if (neibor)
+                tiles.push(neibor);
+        });
+        return tiles;
+    };
+    Field.prototype.getViewArround = function (x, y) {
+        this.getTilesArround(x, y).map(function (tile) {
+            tile.discoveryRate = 0.8;
+        });
+    };
+    Field.prototype.search = function (x, y) {
+        var tile = _.find(this.tiles, function (t) { return t.x === x && t.y === y; });
+        if (tile.discoveryRate > 0)
+            tile.discoveryRate = Math.min(tile.discoveryRate + 0.1, 1);
+        if (tile.discoveryRate === 1) {
+            this.getViewArround(tile.x, tile.y);
+        }
+    };
+    return Field;
+})();
+module.exports = Field;
+//# sourceMappingURL=field.js.map
+},{"mz-terrain":23}],6:[function(require,module,exports){
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -278,24 +339,18 @@ var __extends = this.__extends || function (d, b) {
     d.prototype = new __();
 };
 var subscriber = require('./subscriber');
-var Terrain = require('mz-terrain');
-function toGameTile(tile) {
-    return tile;
-}
+var Field = require('./field');
 var MainContext = (function (_super) {
     __extends(MainContext, _super);
     function MainContext() {
         _super.apply(this, arguments);
     }
     MainContext.prototype.initState = function (props) {
-        var terrain = new Terrain(5, 1);
-        terrain.generate();
-        var tiles = terrain.toArray().map(toGameTile);
-        return { tiles: tiles };
+        return { field: new Field() };
     };
     MainContext.prototype.expandComponentProps = function (props, state) {
         return {
-            tiles: state.tiles
+            tiles: state.field.tiles
         };
     };
     MainContext.component = require('../../components/main');
@@ -306,11 +361,17 @@ var MainContext = (function (_super) {
 })(Arda.Context);
 module.exports = MainContext;
 //# sourceMappingURL=index.js.map
-},{"../../components/main":2,"./subscriber":7,"mz-terrain":23}],7:[function(require,module,exports){
+},{"../../components/main":1,"./field":5,"./subscriber":7}],7:[function(require,module,exports){
 var Sub = require('../sub/index');
 var subscriber = Arda.subscriber(function (context, subscribe) {
     subscribe('main:go-to-sub', function () {
         App.router.pushContext(Sub, {});
+    });
+    subscribe('field:search-tile', function (x, y) {
+        console.log('x, y', x, y);
+        context.update(function (state) {
+            state.field.search(x, y);
+        });
     });
 });
 module.exports = subscriber;
@@ -338,7 +399,7 @@ var SubContext = (function (_super) {
 })(Arda.Context);
 module.exports = SubContext;
 //# sourceMappingURL=index.js.map
-},{"../../components/sub":4}],9:[function(require,module,exports){
+},{"../../components/sub":3}],9:[function(require,module,exports){
 (function() {
   window.addEventListener('load', function() {
     return require('./setup/_bootstrap')();
@@ -353,6 +414,8 @@ module.exports = SubContext;
   require('./globals');
 
   MainContext = require('../contexts/main');
+
+  console.warn = function() {};
 
   module.exports = function() {
     return Promise.resolve(require('./globals')).then(function() {
