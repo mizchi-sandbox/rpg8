@@ -1,5 +1,6 @@
 var Terrain = require('mz-terrain');
 import d = require('./defs')
+import T = require('./tile');
 
 function toGameTile(tile) {
   return {
@@ -12,21 +13,21 @@ function toGameTile(tile) {
 }
 
 class Field {
-  tiles: d.Tile[];
+  tiles: T.Tile[];
 
   constructor(){
-    var terrain = new Terrain(5, 1);
+    var terrain = new Terrain(4, 1);
     terrain.generate();
     this.tiles = terrain.toArray().map(toGameTile);
 
     var ix = _.sample(_.range(0, terrain.size-1));
     var iy = _.sample(_.range(0, terrain.size-1));
-    var initialTile: d.Tile = _.find(this.tiles, (t) => t.x === ix && t.y === iy);
+    var initialTile: T.Tile = _.find(this.tiles, (t) => t.x === ix && t.y === iy);
     initialTile.discoveryRate = 1;
     initialTile.visible = true;
   }
 
-  getTilesArround(x, y): d.Tile[] {
+  getTilesArround(x, y): T.Tile[] {
     var tiles = [];
     var searchPath;
     if(y % 2 === 1) {
@@ -53,14 +54,19 @@ class Field {
   public getViewArround(x, y) {
     this.getTilesArround(x, y)
     .map(tile => {
-      tile.discoveryRate = 0.8;
+      //tile.discoveryRate = 0.8;*/
+      tile.visible = true;
     });
+  }
+
+  public getTile(x: number, y: number): T.Tile {
+    return _.find(this.tiles, (t) => t.x === x && t.y === y);
   }
 
   public search(x, y) {
     var tile = _.find(this.tiles, (t) => t.x === x && t.y === y);
-    if(tile.discoveryRate > 0)
-      tile.discoveryRate = Math.min(tile.discoveryRate+0.1, 1);
+    //if(tile.discoveryRate > 0)*/
+    tile.discoveryRate = Math.min(tile.discoveryRate+0.1, 1);
 
     if(tile.discoveryRate === 1) {
       this.getViewArround(tile.x, tile.y)

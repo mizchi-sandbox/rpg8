@@ -46,14 +46,16 @@
   Hex = React.createClass({
     mixins: [Arda.mixin],
     render: function() {
-      var discoveryRate, fillColor, r, ref, ref1, size, u, v, val, x, y;
-      ref = this.props, x = ref.x, y = ref.y, val = ref.val, discoveryRate = ref.discoveryRate;
+      var discoveryRate, fillColor, r, ref, ref1, size, strokeColor, text, u, v, val, visible, x, y;
+      ref = this.props, x = ref.x, y = ref.y, val = ref.val, discoveryRate = ref.discoveryRate, visible = ref.visible;
       ref1 = xyToUv(x, y), u = ref1[0], v = ref1[1];
-      size = 16;
+      size = 32;
       u = u * size;
       v = v * size;
       r = size * 0.58;
-      fillColor = discoveryRate > 0 ? height2color(val) : 'black';
+      fillColor = discoveryRate > 0 ? height2color(val) : visible ? 'gray' : 'black';
+      strokeColor = discoveryRate === 1 ? 'green' : 'black';
+      text = '' + ~~(discoveryRate * 100) + '%';
       return $('g', {
         transform: "translate(" + u + ", " + v + ")",
         key: "hex:" + x + "," + y + ")"
@@ -61,11 +63,15 @@
         $('polygon', {
           points: hexPoints(r),
           fill: fillColor,
-          stroke: 'black',
+          stroke: strokeColor,
           strokeWidth: 1,
-          onMouseUp: this.onClickTile
+          onMouseUp: visible ? this.onClickTile : void 0,
+          onMouseOver: this.onMouseOver
         })
       ]);
+    },
+    onMouseOver: function() {
+      return this.dispatch('field:show-tile-info', this.props.x, this.props.y);
     },
     onClickTile: function() {
       return this.dispatch('field:search-tile', this.props.x, this.props.y);
@@ -78,19 +84,44 @@
       return $('div', {
         className: 'main'
       }, [
-        $('svg', {
-          width: 640,
-          height: 640,
-          draggable: true,
+        $('div', {
+          className: 'container',
           style: {
-            '-webkit-user-select': 'none'
+            display: 'flex'
           }
         }, [
-          $('g', {
-            transform: "translate(50,50)"
-          }, this.props.tiles.map(function(tile) {
-            return $(Hex, tile);
-          }))
+          $('div', {
+            key: 'fieldContainer',
+            style: {
+              width: '70%'
+            }
+          }, [
+            $('svg', {
+              width: 640,
+              height: 640,
+              draggable: true,
+              style: {
+                '-webkit-user-select': 'none'
+              }
+            }, [
+              $('g', {
+                transform: "translate(50,50)"
+              }, this.props.tiles.map(function(tile) {
+                return $(Hex, tile);
+              }))
+            ])
+          ]), $('div', {
+            key: 'informationContainer',
+            style: {
+              width: '30%'
+            }
+          }, (this.props.selectedTile ? [
+            $('span', {
+              key: 'pos'
+            }, this.props.selectedTile.x + ':' + this.props.selectedTile.y), $('hr'), $('span', {
+              key: 'discoveryRate'
+            }, '発見率:' + this.props.selectedTile.discoveryRate * 100)
+          ] : []))
         ])
       ]);
     }
@@ -274,7 +305,7 @@ function toGameTile(tile) {
 }
 var Field = (function () {
     function Field() {
-        var terrain = new Terrain(5, 1);
+        var terrain = new Terrain(4, 1);
         terrain.generate();
         this.tiles = terrain.toArray().map(toGameTile);
         var ix = _.sample(_.range(0, terrain.size - 1));
@@ -316,13 +347,17 @@ var Field = (function () {
     };
     Field.prototype.getViewArround = function (x, y) {
         this.getTilesArround(x, y).map(function (tile) {
-            tile.discoveryRate = 0.8;
+            //tile.discoveryRate = 0.8;*/
+            tile.visible = true;
         });
+    };
+    Field.prototype.getTile = function (x, y) {
+        return _.find(this.tiles, function (t) { return t.x === x && t.y === y; });
     };
     Field.prototype.search = function (x, y) {
         var tile = _.find(this.tiles, function (t) { return t.x === x && t.y === y; });
-        if (tile.discoveryRate > 0)
-            tile.discoveryRate = Math.min(tile.discoveryRate + 0.1, 1);
+        //if(tile.discoveryRate > 0)*/
+        tile.discoveryRate = Math.min(tile.discoveryRate + 0.1, 1);
         if (tile.discoveryRate === 1) {
             this.getViewArround(tile.x, tile.y);
         }
@@ -350,7 +385,8 @@ var MainContext = (function (_super) {
     };
     MainContext.prototype.expandComponentProps = function (props, state) {
         return {
-            tiles: state.field.tiles
+            tiles: state.field.tiles,
+            selectedTile: state.selectedTile
         };
     };
     MainContext.component = require('../../components/main');
@@ -372,6 +408,15 @@ var subscriber = Arda.subscriber(function (context, subscribe) {
         context.update(function (state) {
             state.field.search(x, y);
         });
+    });
+    subscribe('field:show-tile-info', function (x, y) {
+        //console.log('show tile x, y', x, y);*/
+        var tile = context.state.field.getTile(x, y);
+        if (context.state.selectedTile !== tile) {
+            context.update(function (state) {
+                state.selectedTile = tile;
+            });
+        }
     });
 });
 module.exports = subscriber;

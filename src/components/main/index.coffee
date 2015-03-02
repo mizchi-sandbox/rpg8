@@ -33,9 +33,9 @@ height2color = (height) ->
 Hex = React.createClass
   mixins: [Arda.mixin]
   render: ->
-    {x, y, val, discoveryRate} = @props
+    {x, y, val, discoveryRate, visible} = @props
     [u, v] = xyToUv(x, y)
-    size = 16
+    size = 32
     u = u*size
     v = v*size
     r = size*0.58
@@ -43,18 +43,31 @@ Hex = React.createClass
     fillColor =
       if discoveryRate > 0
         height2color(val)
+      else if visible
+        'gray'
       else
         'black'
+    strokeColor = if discoveryRate is 1 then 'green' else 'black'
+    # text = "#{~~x}, #{~~y}"
+    text = ''+~~(discoveryRate*100)+'%'
 
     $ 'g', transform: "translate(#{u}, #{v})", key: "hex:#{x},#{y})", [
-      # $ 'text', textAnchor: 'middle', fontSize: 10, "#{~~x}, #{~~y}"
       $ 'polygon',
         points: hexPoints(r)
         fill: fillColor
-        stroke:'black'
-        strokeWidth:1
-        onMouseUp: @onClickTile
+        stroke: strokeColor
+        strokeWidth: 1
+        onMouseUp: if visible then @onClickTile else undefined
+        onMouseOver: @onMouseOver
+      # $ 'rect',
+      # $ 'text',
+      #   textAnchor: 'middle'
+      #   fontSize: 10
+      # , text
     ]
+  onMouseOver: ->
+    @dispatch 'field:show-tile-info', @props.x, @props.y
+
   onClickTile: ->
     @dispatch 'field:search-tile', @props.x, @props.y
 
@@ -62,14 +75,35 @@ module.exports = React.createClass
   mixins: [Arda.mixin]
   render: ->
     $ 'div', className: 'main', [
-      $ 'svg',
-        width:640
-        height: 640
-        draggable: true
-        style:
-          '-webkit-user-select': 'none'
-      , [
-          $ 'g', transform: "translate(50,50)",
-            @props.tiles.map (tile) -> $ Hex, tile
+      $ 'div', className: 'container', style: {display: 'flex'}, [
+        $ 'div', key: 'fieldContainer', style: {width: '70%'}, [
+          $ 'svg',
+            width:640
+            height: 640
+            draggable: true
+            style:
+              '-webkit-user-select': 'none'
+          , [
+              $ 'g', transform: "translate(50,50)",
+                @props.tiles.map (tile) -> $ Hex, tile
+          ]
+        ]
+        $ 'div',
+          key: 'informationContainer',
+          style:
+            width: '30%'
+        , (
+            if @props.selectedTile
+              [
+                $ 'span', {key: 'pos'}, (
+                  @props.selectedTile.x + ':' + @props.selectedTile.y
+                )
+                $ 'hr'
+                $ 'span', {key: 'discoveryRate'}, '発見率:'+@props.selectedTile.discoveryRate*100
+              ]
+              # $ 'hr'
+            else
+              []
+        )
       ]
     ]

@@ -14,7 +14,15 @@ var subscriber = Arda.subscriber<d.Props, d.State>((context, subscribe) => {
       state.field.search(x, y);
     });
   });
+  subscribe('field:show-tile-info', (x, y) => {
+    //console.log('show tile x, y', x, y);*/
+    var tile = context.state.field.getTile(x, y);
+    if(context.state.selectedTile !== tile) {
+      context.update(state => {
+        state.selectedTile = tile;
+      });
+    }
+  });
 });
-
 
 export = subscriber;
